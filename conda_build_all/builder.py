@@ -20,6 +20,7 @@ from conda.api import get_index
 import conda.config
 from conda_build.metadata import MetaData
 from conda_build.build import bldpkg_path
+from conda_build.source import provide
 import conda.config
 
 from . import order_deps
@@ -57,7 +58,7 @@ def list_metas(directory, max_depth=0):
     directory
         Where to start looking for metas using os.walk.
     max_depth : int
-        How deep to recurse when looking for recipes. 
+        How deep to recurse when looking for recipes.
         A value ``<=0`` will recurse indefinitely. A value of 1
         will look in the given directory for a meta.yaml.
         (default: 0)
@@ -70,7 +71,7 @@ def list_metas(directory, max_depth=0):
         depth = new_root[len(root):].count(os.path.sep) + 1
         if max_depth > 0 and depth >= max_depth:
             del dirs[:]
- 
+
         if 'meta.yaml' in files:
             packages.append(MetaData(new_root))
     return packages
@@ -130,6 +131,9 @@ class Builder(object):
         """
         conda_recipes_directory = os.path.abspath(os.path.expanduser(self.conda_recipes_directory))
         recipe_metas = list_metas(conda_recipes_directory)
+        for m in recipe_metas:
+            provide(m.path, m.get_section('source'))
+            m.parse_again(permit_undefined_jinja=False)
         recipe_metas = sort_dependency_order(recipe_metas)
         return recipe_metas
 
@@ -146,15 +150,17 @@ class Builder(object):
 
             for recipe_pair in recipes:
                 meta, dist_location = recipe_pair
-                if meta.pkg_fn() in index:
-                    recipe_pair[1] = index[meta.pkg_fn()]['channel']
+                pkg_name = bldpkg_path(meta)
+                if pkg_name in index:
+                    recipe_pair[1] = index[pkg_name]['channel']
         if self.inspection_directories:
             for directory in self.inspection_directories:
                 files = glob.glob(os.path.join(directory, '*.tar.bz2'))
                 fnames = [os.path.basename(fpath) for fpath in files]
                 for recipe_pair in recipes:
                     meta, dist_location = recipe_pair
-                    if dist_location is None and meta.pkg_fn() in fnames:
+                    pkg_name = bldpkg_path(meta)
+                    if dist_location is None and pkg_name in fnames:
                         recipe_pair[1] = directory
         return recipes
 
@@ -180,8 +186,9 @@ class Builder(object):
             for distro in distros:
                 if distro.special_versions in cases:
                     # Update the index with this distribution so that it can be considered by the version matrix.
-                    if distro.pkg_fn() not in index:
-                        index[distro.pkg_fn()] = distro.info_index()
+                    pkg_name = bldpkg_path(distro)
+                    if pkg_name not in index:
+                        index[pkg_name] = distro.info_index()
                     all_distros.append(distro)
 
         return all_distros
@@ -200,7 +207,7 @@ class Builder(object):
         print('Resolved dependencies, will be built in the following order: \n\t{}'.format(
               '\n\t'.join(['{} (will be built: {})'.format(meta.dist(), dist_locn is None)
                            for meta, dist_locn in recipes_and_dist_locn])))
- 
+
         for meta, built_dist_location in recipes_and_dist_locn:
             was_built = built_dist_location is None
             if was_built:
