@@ -88,8 +88,7 @@ def main():
                                         inspection_directories,
                                         artefact_destinations,
                                         args.matrix_conditions,
-                                        max_n_versions,
-                                        site=args.site)
+                                        max_n_versions)
     b.main()
 
 
