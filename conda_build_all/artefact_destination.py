@@ -64,31 +64,53 @@ class DirectoryDestination(ArtefactDestination):
 
 
 class AnacondaClientChannelDest(ArtefactDestination):
-    def __init__(self, token, owner, channel):
+    def __init__(self, token, owner, channel, site=None):
+        """
+        token : str
+            Token that will authenticate a user to the anaconda server
+        owner : str
+            The owner to upload a package to
+        channel : str
+            The channel to upload a package to
+        site : str, optional
+            The anaconda server URL to use.  No default, since None can be
+            passed to the binstar_client creation which uses
+            https://api.anaconda.org by default
+        """
         self.token = token
         self.owner = owner
         self.channel = channel
         self._cli = None
+        self.site = site
 
     @classmethod
-    def from_spec(cls, spec):
+    def from_spec(cls, spec, site=None):
         """
         Create an AnacondaClientChannelDest given the channel specification.
 
         Useful for command line arguments to be able to specify the owner
         and channel in a single string.
 
+        Parameters
+        ----------
+        spec : str
+            "owner/channel"
+        site : str, optional
+            The anaconda server URL to use.  No default, since None can be
+            passed to the binstar_client creation which uses
+            https://api.anaconda.org by default
         """
         token = os.environ.get("BINSTAR_TOKEN", None)
         if '/' in spec:
             owner, _, channel = spec.split('/')
         else:
             owner, channel = spec, 'main'
-        return cls(token, owner, channel)
+        return cls(token, owner, channel, site)
 
     def make_available(self, meta, built_dist_path, just_built):
         if self._cli is None:
-            self._cli = binstar_client.utils.get_binstar(Namespace(token=self.token, site=None))
+            self._cli = binstar_client.utils.get_binstar(
+                Namespace(token=self.token, site=self.site))
 
         already_with_owner = inspect_binstar.distribution_exists(self._cli, self.owner, meta)
         already_on_channel = inspect_binstar.distribution_exists_on_channel(self._cli,
@@ -117,4 +139,3 @@ class AnacondaClientChannelDest(ArtefactDestination):
             # The distribution already existed, but not under the target owner.
             if 'http://' in built_dist_path or 'https://' in built_dist_path:
                 raise NotImplementedError('cross owner copying not yet implemented.')
-

@@ -57,7 +57,7 @@ def list_metas(directory, max_depth=0):
     directory
         Where to start looking for metas using os.walk.
     max_depth : int
-        How deep to recurse when looking for recipes. 
+        How deep to recurse when looking for recipes.
         A value ``<=0`` will recurse indefinitely. A value of 1
         will look in the given directory for a meta.yaml.
         (default: 0)
@@ -70,7 +70,7 @@ def list_metas(directory, max_depth=0):
         depth = new_root[len(root):].count(os.path.sep) + 1
         if max_depth > 0 and depth >= max_depth:
             del dirs[:]
- 
+
         if 'meta.yaml' in files:
             packages.append(MetaData(new_root))
     return packages
@@ -94,7 +94,8 @@ class Builder(object):
     def __init__(self, conda_recipes_directory,
                  inspection_channels, inspection_directories,
                  artefact_destinations,
-                 matrix_conditions, matrix_max_n_major_minor_versions=(2, 2)):
+                 matrix_conditions, matrix_max_n_major_minor_versions=(2, 2),
+                 site=None):
         """
         Build a directory of conda recipes sequentially, if they don't already exist in the inspection locations.
 
@@ -114,7 +115,10 @@ class Builder(object):
             The number of major and minor versions to preserve for each resolved recipe. For instance,
             if a recipe can be built against np 1.7, 1.8 and 1.9, and the number of minor versions is 2,
             the build matrix will prune the 1.7 option.
-
+        site : str, optional
+            The anaconda server URL to use.  No default, since None can be
+            passed to the binstar_client creation which uses
+            https://api.anaconda.org by default
         """
         self.conda_recipes_directory = conda_recipes_directory
         self.inspection_channels = inspection_channels or []
@@ -200,7 +204,7 @@ class Builder(object):
         print('Resolved dependencies, will be built in the following order: \n\t{}'.format(
               '\n\t'.join(['{} (will be built: {})'.format(meta.dist(), dist_locn is None)
                            for meta, dist_locn in recipes_and_dist_locn])))
- 
+
         for meta, built_dist_location in recipes_and_dist_locn:
             was_built = built_dist_location is None
             if was_built:
@@ -222,5 +226,5 @@ class Builder(object):
 
         """
         for artefact_destination in self.artefact_destinations:
-            artefact_destination.make_available(meta, built_dist_location, was_built)
-
+            artefact_destination.make_available(meta, built_dist_location,
+                                                was_built, self.site)

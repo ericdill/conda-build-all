@@ -54,6 +54,12 @@ def main():
               "Python 3 are resolved by the recipe and associated matrix "
               "conditions, a total of Nx2 builds will be identified. "
               "(default: 2)"))
+    parser.add_argument(
+        "--site", default=None, type=str,
+        help=("The url for an anaconda server that is *different* from the "
+              "public one hosted at https://api.anaconda.org. Defaults to "
+              "%(default)s")
+    )
 
     args = parser.parse_args()
 
@@ -68,7 +74,8 @@ def main():
 
     artefact_destinations = []
     for channel in args.upload_channels:
-        dest = artefact_dest.AnacondaClientChannelDest.from_spec(channel)
+        dest = artefact_dest.AnacondaClientChannelDest.from_spec(channel,
+                                                                 site=args.site)
         artefact_destinations.append(dest)
     if args.artefact_directory:
         dest = artefact_dest.DirectoryDestination(args.artefact_directory)
@@ -81,7 +88,8 @@ def main():
                                         inspection_directories,
                                         artefact_destinations,
                                         args.matrix_conditions,
-                                        max_n_versions)
+                                        max_n_versions,
+                                        site=args.site)
     b.main()
 
 
