@@ -22,10 +22,10 @@ def build(meta, test=True):
         # Check whether verbose is a module-level variable in
         # this version of conda_build and set it properly if it is.
         if 'verbose' in dir(build_module):
-            build_module.verbose = False
+            build_module.verbose = True
             kwd = {}
         else:
-            kwd = {'verbose': False}
+            kwd = {'verbose': True}
         meta.check_fields()
         if os.path.exists(conda_build.config.config.info_dir):
             shutil.rmtree(conda_build.config.config.info_dir)
